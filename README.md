@@ -26,6 +26,8 @@ The app is published with GitHub Pages, serving the repository root as the site 
 
 The live site is then served from `https://<user>.github.io/<repo>/`. Nothing else is required — there is no build step, and Wikipedia is called directly from the browser.
 
+Every push to `main` redeploys the site automatically; GitHub runs an internal Pages build for the new commit, which usually finishes in a minute or two. No workflow file is needed in this repo.
+
 ## How it works
 
 `random-date.js` holds the `RandomDate` class, which produces a date between now and exactly 100 years ago. `wikipedia.js` queries the MediaWiki search API for the phrase `"March 14, 1927"` (matching articles that mention that exact date), then picks one result at random. If a date has no indexed articles, it falls back to the Wikipedia day page for that month and day. Requests are cancelled when a newer click supersedes them, and in-flight requests are aborted if the date changes.
