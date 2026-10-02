@@ -29,29 +29,40 @@
         true,
       );
     </script>
+    <script src="./i18n.js" defer></script>
     <script src="./random-date.js" defer></script>
     <script src="./wikipedia.js" defer></script>
     <script src="./app.js" defer></script>
   </head>
   <body>
     <main class="clock-card" aria-labelledby="app-title">
-      <p class="eyebrow">RANDOM HISTORY</p>
-      <h1 id="app-title">Random Date</h1>
+      <div class="lang">
+        <span class="lang__label" data-i18n="language">Language</span>
+        <div id="lang-group" class="lang__options" role="group" aria-label="Language">
+          <button type="button" class="lang__option" data-lang="en" aria-pressed="true">English</button>
+          <button type="button" class="lang__option" data-lang="de" aria-pressed="false">Deutsch</button>
+        </div>
+      </div>
+
+      <p class="eyebrow" data-i18n="eyebrow">RANDOM HISTORY</p>
+      <h1 id="app-title" data-i18n="title">Random Date</h1>
 
       <p id="date" class="date" aria-live="polite"></p>
 
       <p id="boot-error" class="boot-error" role="alert" hidden></p>
+      <p id="quality-note" class="quality-note" hidden data-i18n="qualityOff"></p>
 
       <div id="article" class="article" aria-live="polite" aria-busy="false">
         <p id="article-status" class="article__status"></p>
         <a id="article-link" class="article__link" target="_blank" rel="noopener noreferrer" hidden></a>
+        <span id="article-badge" class="badge" data-i18n="excellent" hidden>Excellent</span>
         <p id="article-snippet" class="article__snippet"></p>
       </div>
 
       <div class="actions">
-        <button id="random-article" class="button button--primary" type="button">Random article</button>
-        <button id="new-link" class="button" type="button">New link</button>
-        <button id="random-date" class="button button--ghost" type="button">New random date</button>
+        <button id="random-article" class="button button--primary" type="button" data-i18n="randomArticle">Random article</button>
+        <button id="new-link" class="button" type="button" data-i18n="newLink">New link</button>
+        <button id="random-date" class="button button--ghost" type="button" data-i18n="newDate">New random date</button>
       </div>
     </main>
   </body>

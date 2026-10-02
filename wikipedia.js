@@ -1,8 +1,7 @@
 (() => {
-  const API_ENDPOINT = "https://en.wikipedia.org/w/api.php";
-  const RESULTS_PER_REQUEST = 50;
+  const { languageConfig } = window.RandomDateApp ?? {};
 
-  const monthFormatter = new Intl.DateTimeFormat("en-US", { month: "long" });
+  const RESULTS_PER_REQUEST = 50;
 
   const NAMED_ENTITIES = {
     amp: "&",
@@ -15,18 +14,6 @@
     mdash: "—",
     hellip: "…",
   };
-
-  function monthName(date) {
-    return monthFormatter.format(date);
-  }
-
-  function dayPageTitle(date) {
-    return `${monthName(date)} ${date.getDate()}`;
-  }
-
-  function articleUrl(title) {
-    return `https://en.wikipedia.org/wiki/${encodeURIComponent(title.replace(/ /g, "_"))}`;
-  }
 
   function decodeEntities(value) {
     return value.replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (match, code) => {
@@ -47,24 +34,32 @@
     return decodeEntities(html.replace(/<[^>]*>/g, "")).replace(/\s+/g, " ").trim();
   }
 
-  function dayPageFallback(date) {
-    const title = dayPageTitle(date);
-
-    return {
-      title,
-      url: articleUrl(title),
-      snippet: `No article was indexed for ${monthName(date)} ${date.getFullYear()}, so here is the Wikipedia day page.`,
-    };
+  function formatDatePhrase(date, locale) {
+    return new Intl.DateTimeFormat(locale, {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }).format(date);
   }
 
-  async function fetchRandomArticleForDate(date, { excludeTitle, signal } = {}) {
-    const phrase = `"${dayPageTitle(date)}, ${date.getFullYear()}"`;
+  function dayPageTitle(date, locale) {
+    return new Intl.DateTimeFormat(locale, { day: "numeric", month: "long" }).format(date);
+  }
+
+  function articleUrl(wiki, title) {
+    return `https://${wiki}/wiki/${encodeURIComponent(title.replace(/ /g, "_"))}`;
+  }
+
+  async function fetchArticlesForDate(date, { language = "en", signal } = {}) {
+    const config = languageConfig(language);
+    const phrase = `"${formatDatePhrase(date, config.locale)}"`;
+    const filters = config.qualityCategory ? [`incategory:"${config.qualityCategory}"`] : [];
     const params = new URLSearchParams({
       action: "query",
       format: "json",
       origin: "*",
       list: "search",
-      srsearch: phrase,
+      srsearch: [phrase, ...filters].join(" "),
       srnamespace: "0",
       srlimit: String(RESULTS_PER_REQUEST),
       srprop: "snippet",
@@ -72,7 +67,7 @@
 
     let payload;
     try {
-      const response = await fetch(`${API_ENDPOINT}?${params}`, { signal });
+      const response = await fetch(`https://${config.wiki}/w/api.php?${params}`, { signal });
       if (!response.ok) {
         throw new Error(`Wikipedia responded with ${response.status}.`);
       }
@@ -84,29 +79,33 @@
       throw new Error("Could not reach Wikipedia. Check your connection and try again.", { cause: error });
     }
 
-    const results = (payload?.query?.search ?? []).filter(
-      (result) => typeof result.title === "string" && result.title !== dayPageTitle(date),
-    );
-    const freshResults = results.filter((result) => result.title !== excludeTitle);
-    const pool = freshResults.length > 0 ? freshResults : results;
+    const dayPage = dayPageTitle(date, config.locale);
+
+    return (payload?.query?.search ?? [])
+      .filter((result) => typeof result.title === "string" && result.title !== dayPage)
+      .map((result) => ({
+        title: result.title,
+        url: articleUrl(config.wiki, result.title),
+        snippet: toPlainText(result.snippet ?? ""),
+      }));
+  }
+
+  function pickRandomArticle(results, { excludeTitle = null, strictExclude = false } = {}) {
+    const fresh = excludeTitle ? results.filter((result) => result.title !== excludeTitle) : results;
+    const pool = strictExclude ? fresh : fresh.length > 0 ? fresh : results;
 
     if (pool.length === 0) {
-      return dayPageFallback(date);
+      return null;
     }
 
-    const match = pool[Math.floor(Math.random() * pool.length)];
-
-    return {
-      title: match.title,
-      url: articleUrl(match.title),
-      snippet: toPlainText(match.snippet ?? ""),
-    };
+    return pool[Math.floor(Math.random() * pool.length)];
   }
 
   window.RandomDateApp = Object.assign(window.RandomDateApp ?? {}, {
-    fetchRandomArticleForDate,
+    fetchArticlesForDate,
+    pickRandomArticle,
     articleUrl,
-    monthName,
+    formatDatePhrase,
     dayPageTitle,
   });
 })();
